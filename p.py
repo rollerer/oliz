@@ -1,6 +1,7 @@
 
 import RPi.GPIO as GPIO
 from time import sleep
+from time import time
 import matplotlib.pyplot as plt
 GPIO.setmode(GPIO.BCM)
 
@@ -22,7 +23,6 @@ def adc():
     v=[0]*8
     for i in range(7, -1, -1):
         value += 2**i
-        dacc = []
         dacc = desimal2binary(value)
         GPIO.output(dac, dacc)
         sleep(0.005)
@@ -38,20 +38,32 @@ try:
     s=0
     i=0
     key=0
+    start_time = time()
     while True:
-        a.append(adc())
-        c.append(i)
+        aaa = adc()
+        a.append(aaa)
+        print(round(aaa*3.3/256, 3))
+        GPIO.output(leds, desimal2binary(128))
+        c.append(time()-start_time)
         i+=1
-        if adc() == 243:
+        if aaa >= 256*0.95:
             key+=1
-            if key == 15:
+            if key == 12:
                 GPIO.output(troyka, 0)
                 s=1
-        if adc() == 24 and s==1:
+        if aaa <= 256*0.094 and s==1:
+            end_time = time()
             break
 finally:
     GPIO.cleanup()
     with open('data.txt', 'w') as d:
-        d.write("\n".join([str(i) for i in a]))
-    plt.plot(a)
+        d.write("\n".join([str(i*3.3/256) for i in a]))
+    ttime = end_time-start_time
+    print('время замера: ' + str(round(ttime, 3)))
+    print('период: ' + str(round(ttime/len(a), 3)))
+    print('частота: '+str(round(len(a)/ttime,3)))
+    print('шаг квантования: ' + str(round(3.3/256,3)))
+    plt.xlim([0, 11])
+    plt.ylim([0,3.3])
+    plt.plot(c, [float(i*3.3/256) for i in a])
     plt.show()
